@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <script>
+      // 1. Prevent "Cannot set property fetch of #<Window> which has only a getter"
+      // when libraries, extensions, or environment shims attempt to assign to window.fetch
+      (function() {
+        try {
+          const originalFetch = window.fetch ? window.fetch.bind(window) : undefined;
+          let activeFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            get() {
+              return activeFetch || originalFetch;
+            },
+            set(fn) {
+              activeFetch = fn;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (_) {
+          // Property descriptor fallback if not reconfigurable
+        }
+      })();
+
+      // 2. Suppress benign Vite HMR websocket connection notices in containerized preview
+      (function() {
+        const isViteNotice = function(arg) {
+          if (!arg) return false;
+          const str = typeof arg === 'string' ? arg : (arg.message || String(arg));
+          return str.includes('[vite]') || str.includes('WebSocket closed without opened') || str.includes('failed to connect to websocket');
+        };
+
+        const _error = console.error;
+        console.error = function(...args) {
+          if (args.some(isViteNotice)) return;
+          return _error.apply(console, args);
+        };
+
+        const _warn = console.warn;
+        console.warn = function(...args) {
+          if (args.some(isViteNotice)) return;
+          return _warn.apply(console, args);
+        };
+
+        window.addEventListener('error', function(e) {
+          if (isViteNotice(e?.message) || isViteNotice(e?.error)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isViteNotice(e?.reason)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
+    <title>Personal Assistant</title>
+    <meta name="description" content="A personal assistant to track goals, reflections, to-do lists, and expenses with AI-driven insights." />
+    <meta name="theme-color" content="#0B1020" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Assistant" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:title" content="Personal Assistant" />
+    <meta property="og:description" content="A personal assistant to track goals, reflections, to-do lists, and expenses with AI-driven insights." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

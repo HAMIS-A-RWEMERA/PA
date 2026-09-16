@@ -1,0 +1,8 @@
+{
+  "name": "Personal Assistant",
+  "description": "A personal assistant to track goals, reflections, to-do lists, and expenses with AI-driven insights.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

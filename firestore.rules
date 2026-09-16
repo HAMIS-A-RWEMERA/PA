@@ -1,0 +1,139 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Health / connection check path
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Global Helper Functions
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Validation Helpers
+    function isValidTask(data) {
+      return data.userId is string &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 500 &&
+             data.priority is string && (data.priority == 'high' || data.priority == 'medium' || data.priority == 'low') &&
+             data.completed is bool &&
+             (!('goalId' in data) || data.goalId is string || data.goalId == null) &&
+             (!('reflection' in data) || data.reflection is string || data.reflection == null) &&
+             (!('pinned' in data) || data.pinned is bool) &&
+             (!('color' in data) || data.color is string) &&
+             (!('subtasks' in data) || data.subtasks is list) &&
+             (!('tags' in data) || data.tags is list) &&
+             (!('isArchived' in data) || data.isArchived is bool);
+    }
+    
+    function isValidTimeEntry(data) {
+      return data.userId is string &&
+             data.taskId is string &&
+             data.startTime is timestamp &&
+             (!('endTime' in data) || data.endTime is timestamp || data.endTime == null);
+    }
+
+    function isValidEnergyLog(data) {
+      return data.userId is string &&
+             data.energyLevel is number && data.energyLevel >= 1 && data.energyLevel <= 10;
+    }
+
+    function isValidExpense(data) {
+      return data.userId is string &&
+             data.amount is number && data.amount >= 0 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 100;
+    }
+
+    function isValidIncome(data) {
+      return data.userId is string &&
+             data.amount is number && data.amount >= 0 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 100;
+    }
+
+    function isValidGoal(data) {
+      return data.userId is string &&
+             data.target is string && data.target.size() > 0 && data.target.size() <= 200 &&
+             data.goalDescription is string && data.goalDescription.size() > 0 && data.goalDescription.size() <= 500;
+    }
+
+    function isValidReflection(data) {
+      return data.userId is string &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 5000;
+    }
+
+    function isValidCVProfile(data) {
+      return data.userId is string &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 150 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 150;
+    }
+
+    function isValidGalleryItem(data) {
+      return data.userId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() <= 650000;
+    }
+
+    // Collections
+    match /tasks/{taskId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidTask(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+    
+    match /expenses/{expenseId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidExpense(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /income/{incomeId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidIncome(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /goals/{goalId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidGoal(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /timeEntries/{entryId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidTimeEntry(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /energyLogs/{logId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidEnergyLog(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /reflections/{reflectionId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidReflection(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /cv_profiles/{profileId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidCVProfile(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /gallery/{photoId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidGalleryItem(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}
+

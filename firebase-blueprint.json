@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "Goal": {
+      "title": "Goal",
+      "description": "Yearly goals",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "target": { "type": "string" },
+        "goalDescription": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["userId", "target", "goalDescription"]
+    },
+    "Reflection": {
+      "title": "Reflection",
+      "description": "Daily reflection",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "content": { "type": "string" }
+      },
+      "required": ["userId", "date", "content"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Weekly to-do list items",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "goalId": { "type": "string" },
+        "reflection": { "type": "string" },
+        "skills": { "type": "array" },
+        "date": { "type": "string" },
+        "pinned": { "type": "boolean" },
+        "color": { "type": "string" },
+        "subtasks": { "type": "array" },
+        "tags": { "type": "array" },
+        "isArchived": { "type": "boolean" }
+      },
+      "required": ["userId", "description", "completed"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Daily expenses",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["userId", "amount", "category"]
+    },
+    "Income": {
+      "title": "Income",
+      "description": "Income records",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["userId", "amount", "category"]
+    },
+    "TimeEntry": {
+      "title": "TimeEntry",
+      "description": "Focus timer tracking entries",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "taskId": { "type": "string" },
+        "startTime": { "type": "object" },
+        "endTime": { "type": "object" }
+      },
+      "required": ["userId", "taskId", "startTime"]
+    },
+    "EnergyLog": {
+      "title": "EnergyLog",
+      "description": "Daily energy level and wellness audits",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "energyLevel": { "type": "number" },
+        "tags": { "type": "array" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["userId", "energyLevel"]
+    },
+    "CVProfile": {
+      "title": "CVProfile",
+      "description": "Comprehensive Curriculum Vitae, career history, education, skills, and certifications",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "title": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "location": { "type": "string" },
+        "summary": { "type": "string" },
+        "experiences": { "type": "array" },
+        "education": { "type": "array" },
+        "certifications": { "type": "array" },
+        "skillCategories": { "type": "array" },
+        "projects": { "type": "array" },
+        "updatedAt": { "type": "object" }
+      },
+      "required": ["userId", "fullName", "title"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Personal photo gallery, memories, certificates, and milestone pictures",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "caption": { "type": "string" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["userId", "title", "imageUrl"]
+    }
+  },
+  "firestore": {
+    "/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "Goals collection"
+    },
+    "/reflections/{reflectionId}": {
+      "schema": "Reflection",
+      "description": "Reflections collection"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Tasks collection"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expenses collection"
+    },
+    "/income/{incomeId}": {
+      "schema": "Income",
+      "description": "Income collection"
+    },
+    "/timeEntries/{entryId}": {
+      "schema": "TimeEntry",
+      "description": "Time tracking entries collection"
+    },
+    "/energyLogs/{logId}": {
+      "schema": "EnergyLog",
+      "description": "Energy logs collection"
+    },
+    "/cv_profiles/{profileId}": {
+      "schema": "CVProfile",
+      "description": "User CV and portfolio profile"
+    },
+    "/gallery/{photoId}": {
+      "schema": "GalleryItem",
+      "description": "User photo and visual memories gallery"
+    }
+  }
+}
