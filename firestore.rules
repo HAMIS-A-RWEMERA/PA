@@ -80,6 +80,46 @@ service cloud.firestore {
              data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() <= 650000;
     }
 
+    function isValidFamilyMember(data) {
+      return data.userId is string &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 150 &&
+             data.relationship is string && data.relationship.size() > 0 && data.relationship.size() <= 100;
+    }
+
+    function isValidSkillEntry(data) {
+      return data.userId is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 150;
+    }
+
+    function isValidCalendarEvent(data) {
+      return data.userId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 300;
+    }
+
+    function isValidFinancialPosition(data) {
+      return data.userId is string;
+    }
+
+    function isValidDebtRecord(data) {
+      return data.userId is string &&
+             data.type in ['owed_by_me', 'owed_to_me'] &&
+             data.counterparty is string && data.counterparty.size() > 0 &&
+             data.amount is number;
+    }
+
+    function isValidInvestmentRecord(data) {
+      return data.userId is string &&
+             data.type in ['rnit_nav', 'shares', 'savings', 'asset'] &&
+             data.name is string && data.name.size() > 0;
+    }
+
+    function isValidRecurringCashflow(data) {
+      return data.userId is string &&
+             data.type in ['recurring_income', 'expected_receivable', 'recurring_obligation'] &&
+             data.name is string && data.name.size() > 0 &&
+             data.amount is number;
+    }
+
     // Collections
     match /tasks/{taskId} {
       allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
@@ -96,6 +136,18 @@ service cloud.firestore {
     match /income/{incomeId} {
       allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
       allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidIncome(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /skills/{skillId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidSkillEntry(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /calendar_events/{eventId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidCalendarEvent(incoming());
       allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
     }
 
@@ -132,6 +184,36 @@ service cloud.firestore {
     match /gallery/{photoId} {
       allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
       allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidGalleryItem(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /family_members/{memberId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidFamilyMember(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /financial_positions/{posId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidFinancialPosition(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /debts/{debtId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidDebtRecord(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /investments/{invId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidInvestmentRecord(incoming());
+      allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /recurring_cashflows/{cfId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidRecurringCashflow(incoming());
       allow update, delete: if isSignedIn() && existing().userId == request.auth.uid;
     }
   }

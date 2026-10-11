@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { auth, signInWithGoogle, db } from './lib/firebase';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import EntryForm from './components/EntryForm';
 import QuickCaptureBar from './components/QuickCaptureBar';
 import AIAdvisor from './components/AIAdvisor';
@@ -16,10 +16,38 @@ import SkillReports from './components/SkillReports';
 import FinancialInsights from './components/FinancialInsights';
 import Chatbot from './components/Chatbot';
 import EnergyAudit from './components/EnergyAudit';
+import CVPortfolioManager from './components/CVPortfolioManager';
+import PersonalGallery from './components/PersonalGallery';
+import FamilyTreeManager from './components/FamilyTreeManager';
+import SkillsManager from './components/SkillsManager';
+import WealthBalanceSheetManager from './components/WealthBalanceSheetManager';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { TaskColor } from './types';
-import { Moon, Sun, Shield, LogOut, CheckCircle2, TrendingUp, TrendingDown, Target, Clock, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { 
+  Moon, 
+  Sun, 
+  Shield, 
+  LogOut, 
+  CheckCircle2, 
+  TrendingUp, 
+  TrendingDown, 
+  Target, 
+  Clock, 
+  Zap, 
+  ChevronDown, 
+  ChevronUp,
+  FileText,
+  Camera,
+  GitFork,
+  Briefcase,
+  Sparkles,
+  ArrowUpRight,
+  Layers,
+  Award,
+  Download,
+  Wallet
+} from 'lucide-react';
 
 interface TaskItem {
   id: string;
@@ -32,11 +60,16 @@ interface TaskItem {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [activeView, setActiveView] = useState<'dashboard' | 'cv' | 'gallery' | 'family' | 'skills' | 'wealth'>('dashboard');
   const [tasks, setTasks] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [income, setIncome] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [timeEntries, setTimeEntries] = useState<any[]>([]);
+  const [galleryCount, setGalleryCount] = useState<number>(0);
+  const [familyCount, setFamilyCount] = useState<number>(0);
+  const [skillsCount, setSkillsCount] = useState<number>(0);
+  const [cvTitle, setCvTitle] = useState<string>('Master CV');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [isDeepWorkMode, setIsDeepWorkMode] = useState(false);
   const [showDetailedForm, setShowDetailedForm] = useState(false);
@@ -113,14 +146,130 @@ export default function App() {
       }
     );
 
+    const qGallery = query(collection(db, 'gallery'), where('userId', '==', user.uid));
+    const unsubscribeGallery = onSnapshot(
+      qGallery,
+      (snapshot) => {
+        setGalleryCount(snapshot.docs.length);
+      },
+      (error) => {
+        console.warn('Gallery listener note:', error);
+      }
+    );
+
+    const qFamily = query(collection(db, 'family_members'), where('userId', '==', user.uid));
+    const unsubscribeFamily = onSnapshot(
+      qFamily,
+      (snapshot) => {
+        setFamilyCount(snapshot.docs.length);
+      },
+      (error) => {
+        console.warn('Family listener note:', error);
+      }
+    );
+
+    const qCV = query(collection(db, 'cv_profiles'), where('userId', '==', user.uid));
+    const unsubscribeCV = onSnapshot(
+      qCV,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setCvTitle(data.fullName || data.targetTitle || 'Master CV');
+        }
+      },
+      (error) => {
+        console.warn('CV listener note:', error);
+      }
+    );
+
+    const qSkills = query(collection(db, 'skills'), where('userId', '==', user.uid));
+    const unsubscribeSkills = onSnapshot(
+      qSkills,
+      (snapshot) => {
+        setSkillsCount(snapshot.docs.length);
+      },
+      (error) => {
+        console.warn('Skills listener note:', error);
+      }
+    );
+
     return () => { 
       unsubscribeTasks(); 
       unsubscribeExpenses(); 
       unsubscribeIncome(); 
       unsubscribeGoals(); 
       unsubscribeTimeEntries(); 
+      unsubscribeGallery();
+      unsubscribeFamily();
+      unsubscribeCV();
+      unsubscribeSkills();
     };
   }, [user]);
+
+  const handleDownloadAllDataBackup = async () => {
+    let familyRecords: any[] = [];
+    let debtRecords: any[] = [];
+    let investmentRecords: any[] = [];
+    let skillRecords: any[] = [];
+    let cvRecords: any[] = [];
+    let galleryRecords: any[] = [];
+
+    if (user) {
+      try {
+        const [famSnap, debtSnap, invSnap, skillSnap, cvSnap, galSnap] = await Promise.all([
+          getDocs(query(collection(db, 'family_members'), where('userId', '==', user.uid))),
+          getDocs(query(collection(db, 'debts'), where('userId', '==', user.uid))),
+          getDocs(query(collection(db, 'investments'), where('userId', '==', user.uid))),
+          getDocs(query(collection(db, 'skills'), where('userId', '==', user.uid))),
+          getDocs(query(collection(db, 'cv_profiles'), where('userId', '==', user.uid))),
+          getDocs(query(collection(db, 'gallery'), where('userId', '==', user.uid)))
+        ]);
+
+        familyRecords = famSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        debtRecords = debtSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        investmentRecords = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        skillRecords = skillSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        cvRecords = cvSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        galleryRecords = galSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (err) {
+        console.warn('Backup fetching supplementary collections fallback:', err);
+      }
+    }
+
+    const backupData = {
+      exportDate: new Date().toISOString(),
+      user: {
+        email: user?.email,
+        uid: user?.uid
+      },
+      tasks,
+      expenses,
+      income,
+      goals,
+      timeEntries,
+      familyMembers: familyRecords,
+      debts: debtRecords,
+      investments: investmentRecords,
+      skills: skillRecords,
+      cvProfiles: cvRecords,
+      gallery: galleryRecords
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `RWEMERA_Life_OS_Complete_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.rel = 'noopener';
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    }, 30000);
+  };
 
   const toggleTask = async (id: string, completed: boolean, reflection?: string) => {
     const taskRef = doc(db, 'tasks', id);
@@ -278,6 +427,94 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* View Navigation Switcher - visible and scrollable across all screen sizes */}
+            <nav className="flex items-center gap-1 bg-[#121A2E] p-1 rounded-xl border border-[#1E293B] text-xs overflow-x-auto max-w-full">
+              <button
+                onClick={() => setActiveView('dashboard')}
+                className={`px-3 py-1.5 rounded-lg transition font-medium whitespace-nowrap cursor-pointer ${
+                  activeView === 'dashboard' 
+                    ? 'bg-[#7C5CFC] text-white shadow-sm' 
+                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveView('wealth')}
+                className={`px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeView === 'wealth' 
+                    ? 'bg-[#10B981] text-white shadow-sm font-bold' 
+                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                }`}
+              >
+                <Wallet size={13} className="text-[#34D399]" /> Wealth &amp; Debts
+              </button>
+              <button
+                onClick={() => setActiveView('cv')}
+                className={`px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeView === 'cv' 
+                    ? 'bg-[#7C5CFC] text-white shadow-sm' 
+                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                }`}
+              >
+                <FileText size={13} /> Curriculum Vitae
+              </button>
+              <button
+                onClick={() => setActiveView('skills')}
+                className={`px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeView === 'skills' 
+                    ? 'bg-[#FBBF24]/20 text-[#FBBF24] border border-[#FBBF24]/40 font-bold shadow-sm' 
+                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                }`}
+              >
+                <Award size={13} className="text-[#FBBF24]" /> Skills &amp; Strengths
+                {skillsCount > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#FBBF24]/30 text-[#FBBF24] font-mono">
+                    {skillsCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveView('gallery')}
+                className={`px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeView === 'gallery' 
+                    ? 'bg-[#7C5CFC] text-white shadow-sm' 
+                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                }`}
+              >
+                <Camera size={13} /> Gallery
+                {galleryCount > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#38BDF8]/20 text-[#38BDF8]">
+                    {galleryCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveView('family')}
+                className={`px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeView === 'family' 
+                    ? 'bg-[#7C5CFC] text-white shadow-sm' 
+                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
+                }`}
+              >
+                <GitFork size={13} /> Family Tree
+                {familyCount > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#10B981]/20 text-[#10B981]">
+                    {familyCount}
+                  </span>
+                )}
+              </button>
+            </nav>
+
+            <button
+              onClick={handleDownloadAllDataBackup}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#18223A] text-[#38BDF8] hover:bg-[#38BDF8]/10 border border-[#1E293B] hover:border-[#38BDF8]/40 transition cursor-pointer"
+              title="Download full offline JSON backup of all your data"
+            >
+              <Download size={13} />
+              <span className="hidden sm:inline">Backup</span>
+            </button>
+
             <PWAInstallButton />
 
             <button 
@@ -307,7 +544,28 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto p-4 sm:p-8">
-        {isDeepWorkMode ? (
+        {activeView === 'wealth' && (
+          <WealthBalanceSheetManager onBack={() => setActiveView('dashboard')} />
+        )}
+
+        {activeView === 'cv' && (
+          <CVPortfolioManager onBack={() => setActiveView('dashboard')} />
+        )}
+
+        {activeView === 'gallery' && (
+          <PersonalGallery onBack={() => setActiveView('dashboard')} />
+        )}
+
+        {activeView === 'family' && (
+          <FamilyTreeManager onBack={() => setActiveView('dashboard')} />
+        )}
+
+        {activeView === 'skills' && (
+          <SkillsManager onBack={() => setActiveView('dashboard')} />
+        )}
+
+        {activeView === 'dashboard' && (
+          isDeepWorkMode ? (
           /* Sanctuary Mode (Deep Focus, Environmental Isolation) */
           <div className="flex flex-col items-center justify-center min-h-[75vh] relative py-12">
             <div className="absolute w-96 h-96 bg-[#7C5CFC]/10 rounded-full blur-3xl pointer-events-none" />
@@ -517,7 +775,208 @@ export default function App() {
               <AIAdvisor />
               <Chatbot />
             </div>
+
+            {/* THREE BOTTOM ACCESS BOXES: Curriculum Vitae, Gallery, and Family Tree */}
+            <div className="pt-6 border-t border-[#1E293B] space-y-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-[#7C5CFC]" />
+                  <span className="text-xs font-mono text-[#94A3B8] uppercase tracking-wider">
+                    All-in-One Personal Hub
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-[#F8FAFC]">
+                  Professional, Memories & Ancestral Heritage
+                </h3>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  Direct access to your career portfolio, photo milestones, and multi-generational family tree connected to your AI assistant.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Box 1: Curriculum Vitae */}
+                <div
+                  id="cv-quick-box"
+                  onClick={() => setActiveView('cv')}
+                  className="bg-[#121A2E] hover:bg-[#15203A] p-5 rounded-2xl border border-[#1E293B] hover:border-[#7C5CFC]/60 transition-all duration-200 cursor-pointer group shadow-lg flex flex-col justify-between space-y-4 relative overflow-hidden"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-[#7C5CFC]/20 text-[#7C5CFC] flex items-center justify-center border border-[#7C5CFC]/30 group-hover:scale-105 transition">
+                        <FileText size={20} />
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#7C5CFC]/15 text-[#7C5CFC] border border-[#7C5CFC]/30">
+                        AI Tailor Ready
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-base font-bold text-[#F8FAFC] group-hover:text-[#7C5CFC] transition">
+                        Curriculum Vitae
+                      </h4>
+                      <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2 leading-relaxed">
+                        Master work history, degrees, 17 verified certificates, and instant PDF/Word/HTML downloads.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#1E293B] flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-[#94A3B8] font-medium truncate max-w-[130px]">
+                      {cvTitle}
+                    </span>
+                    <span className="text-[#7C5CFC] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition">
+                      Open CV <ArrowUpRight size={13} />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Box 2: Skills & CliftonStrengths Hub */}
+                <div
+                  id="skills-quick-box"
+                  onClick={() => setActiveView('skills')}
+                  className="bg-[#121A2E] hover:bg-[#15203A] p-5 rounded-2xl border border-[#1E293B] hover:border-[#FBBF24]/60 transition-all duration-200 cursor-pointer group shadow-lg flex flex-col justify-between space-y-4 relative overflow-hidden"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-[#FBBF24]/20 text-[#FBBF24] flex items-center justify-center border border-[#FBBF24]/30 group-hover:scale-105 transition">
+                        <Award size={20} />
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#FBBF24]/15 text-[#FBBF24] border border-[#FBBF24]/30">
+                        Top 5 Gallup
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-base font-bold text-[#F8FAFC] group-hover:text-[#FBBF24] transition">
+                        Skills &amp; Strengths Hub
+                      </h4>
+                      <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2 leading-relaxed">
+                        Achiever, Learner, Analytical, Discipline, Focus, UN logistics competencies &amp; logged skill hours.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#1E293B] flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-[#94A3B8] font-medium">
+                      {skillsCount} Logged Skills
+                    </span>
+                    <span className="text-[#FBBF24] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition">
+                      Open Skills <ArrowUpRight size={13} />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Box 3: Gallery */}
+                <div
+                  id="gallery-quick-box"
+                  onClick={() => setActiveView('gallery')}
+                  className="bg-[#121A2E] hover:bg-[#15203A] p-5 rounded-2xl border border-[#1E293B] hover:border-[#38BDF8]/60 transition-all duration-200 cursor-pointer group shadow-lg flex flex-col justify-between space-y-4 relative overflow-hidden"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-[#38BDF8]/20 text-[#38BDF8] flex items-center justify-center border border-[#38BDF8]/30 group-hover:scale-105 transition">
+                        <Camera size={20} />
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/30">
+                        {galleryCount} Photos
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-base font-bold text-[#F8FAFC] group-hover:text-[#38BDF8] transition">
+                        Gallery
+                      </h4>
+                      <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2 leading-relaxed">
+                        Keep pictures of milestones, certificates, awards, and life moments archived for your personal AI.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#1E293B] flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-[#94A3B8] font-medium">
+                      Visual Memories
+                    </span>
+                    <span className="text-[#38BDF8] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition">
+                      Open Gallery <ArrowUpRight size={13} />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Box 4: Family Tree (from Mom's Grandpa down) */}
+                <div
+                  id="family-quick-box"
+                  onClick={() => setActiveView('family')}
+                  className="bg-[#121A2E] hover:bg-[#15203A] p-5 rounded-2xl border border-[#1E293B] hover:border-[#10B981]/60 transition-all duration-200 cursor-pointer group shadow-lg flex flex-col justify-between space-y-4 relative overflow-hidden"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 text-[#10B981] flex items-center justify-center border border-[#10B981]/30 group-hover:scale-105 transition">
+                        <GitFork size={20} />
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+                        {familyCount} Relatives
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-base font-bold text-[#F8FAFC] group-hover:text-[#10B981] transition">
+                        Ancestral Family Tree
+                      </h4>
+                      <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2 leading-relaxed">
+                        Preserve heritage starting from Mom's grandpa down to future generations and the ones they gave birth to.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#1E293B] flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-[#94A3B8] font-medium">
+                      Living Chronicle
+                    </span>
+                    <span className="text-[#10B981] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition">
+                      Open Family Tree <ArrowUpRight size={13} />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Box 5: Wealth, Debts & RNIT NAV */}
+                <div
+                  id="wealth-quick-box"
+                  onClick={() => setActiveView('wealth')}
+                  className="bg-[#121A2E] hover:bg-[#15203A] p-5 rounded-2xl border border-[#1E293B] hover:border-[#34D399]/60 transition-all duration-200 cursor-pointer group shadow-lg flex flex-col justify-between space-y-4 relative overflow-hidden"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-[#34D399]/20 text-[#34D399] flex items-center justify-center border border-[#34D399]/30 group-hover:scale-105 transition">
+                        <Wallet size={20} />
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#34D399]/15 text-[#34D399] border border-[#34D399]/30">
+                        RNIT &amp; Debts
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-base font-bold text-[#F8FAFC] group-hover:text-[#34D399] transition">
+                        Wealth &amp; Balance Sheet
+                      </h4>
+                      <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2 leading-relaxed">
+                        RNIT Iterambere Fund units, daily NAV tracking, two-way debt ledger, MoMo/bank starting balances &amp; net worth.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#1E293B] flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-[#94A3B8] font-medium">
+                      Live Balance Sheet
+                    </span>
+                    <span className="text-[#34D399] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition">
+                      Open Wealth Hub <ArrowUpRight size={13} />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+          )
         )}
       </main>
 

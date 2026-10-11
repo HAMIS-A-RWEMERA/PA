@@ -8,8 +8,7 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.cjs",
-    "lint": "tsc --noEmit",
-    "postinstall": "node -e \"const f='node_modules/vite-plugin-pwa/dist/index.js'; if(require('fs').existsSync(f)){ let c=require('fs').readFileSync(f,'utf8'); c=c.replace(/typeof __dirname !== \\\"undefined\\\" \\? __dirname : dirname/g, 'dirname'); require('fs').writeFileSync(f,c); }\""
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

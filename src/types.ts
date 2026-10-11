@@ -47,6 +47,85 @@ export interface Income {
   date: string;
 }
 
+export interface FinancialPosition {
+  id: string;
+  userId: string;
+  cashOnHand: number;
+  mobileMoney: number;
+  bankBalance: number;
+  notes?: string;
+  updatedAt: string;
+}
+
+export interface DebtRecord {
+  id: string;
+  userId: string;
+  type: 'owed_by_me' | 'owed_to_me';
+  counterparty: string;
+  amount: number;
+  amountPaid: number;
+  dueDate?: string;
+  startDate?: string;
+  status: 'active' | 'partially_paid' | 'settled';
+  notes?: string;
+}
+
+export interface InvestmentRecord {
+  id: string;
+  userId: string;
+  type: 'rnit_nav' | 'shares' | 'savings' | 'asset';
+  name: string;
+  units: number; // e.g. units held in RNIT Iterambere Fund
+  purchasePrice: number; // buy NAV or purchase price per unit
+  currentPrice: number; // current NAV per unit or current market price
+  totalInvested: number;
+  currentValue: number;
+  notes?: string;
+  withdrawals?: Array<{
+    date: string;
+    unitsWithdrawn: number;
+    navPrice: number;
+    amountReceived: number;
+    note?: string;
+  }>;
+}
+
+export interface RecurringCashflow {
+  id: string;
+  userId: string;
+  type: 'recurring_income' | 'expected_receivable' | 'recurring_obligation';
+  name: string;
+  amount: number;
+  frequency: 'monthly' | 'weekly' | 'one_time' | 'biweekly';
+  expectedDate?: string;
+  status: 'active' | 'received' | 'pending';
+  notes?: string;
+}
+
+export interface SkillEntry {
+  id: string;
+  userId: string;
+  name: string;
+  category: string;
+  level: 'Novice' | 'Intermediate' | 'Advanced' | 'Mastery';
+  hoursInvested?: number;
+  notes?: string;
+  tags?: string[];
+  date: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  startDate: string; // ISO string or YYYY-MM-DD / YYYY-MM-DDTHH:mm
+  endDate?: string;
+  location?: string;
+  source?: 'google_calendar' | 'ical_import' | 'manual';
+  googleEventId?: string;
+}
+
 export interface TimeEntry {
   id: string;
   userId: string;
@@ -84,6 +163,9 @@ export interface CVCertification {
   issueDate: string;
   credentialId?: string;
   credentialUrl?: string;
+  category?: string;
+  score?: string;
+  notes?: string;
 }
 
 export interface CVSkillCategory {
@@ -131,6 +213,40 @@ export interface GalleryPhoto {
   date: string;
   imageUrl: string;
   createdAt?: any;
+}
+
+export interface FamilyMember {
+  id: string;
+  userId: string;
+  fullName: string;
+  relationship: string; // e.g. "Maternal Great-Grandpa (Ancestor)", "Grandpa", "Grandmother", "Mother", "Great-Uncle", "Aunt", "Self", "Sibling", "Cousin", "Child"
+  generation: number; // 1 = Great-Grandparents / Ancestor, 2 = Grandparents, 3 = Parents, 4 = My Generation, 5 = Children & Next Gen
+  parentIds?: string[];
+  spouseName?: string;
+  birthYear?: string;
+  passedYear?: string;
+  isAlive?: boolean;
+  birthPlace?: string;
+  occupation?: string;
+  notesBio?: string;
+  branch?: string; // e.g. "Mom's Lineage (Root: Grandpa's Father)", "Dad's Lineage", or family clan
+  createdAt?: any;
+}
+
+export interface TailoredCVResult {
+  jobTitle: string;
+  targetCompany?: string;
+  executiveSummary: string;
+  tailoredHighlights: string[];
+  customizedExperiences: {
+    role: string;
+    company: string;
+    dates: string;
+    bulletPoints: string[];
+  }[];
+  keySkills: string[];
+  certifications: string[];
+  fitScoreExplanation?: string;
 }
 
 export const KEEP_COLORS: { id: TaskColor; name: string; bg: string; border: string; accent: string; dot: string }[] = [

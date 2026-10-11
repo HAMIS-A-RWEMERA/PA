@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { PlusCircle, CheckSquare, DollarSign, Wallet, Target, Sparkles } from 'lucide-react';
+import { PlusCircle, CheckSquare, DollarSign, Wallet, Target, Sparkles, Award } from 'lucide-react';
 
 export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goals: any[] }) {
-  const [type, setType] = useState<'task' | 'expense' | 'income' | 'goal'>('task');
+  const [type, setType] = useState<'task' | 'expense' | 'income' | 'goal' | 'skill'>('task');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -14,6 +14,8 @@ export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goa
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [goalId, setGoalId] = useState('');
   const [skills, setSkills] = useState('');
+  const [skillLevel, setSkillLevel] = useState<'Novice' | 'Intermediate' | 'Advanced' | 'Mastery'>('Intermediate');
+  const [hoursInvested, setHoursInvested] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,7 +24,7 @@ export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goa
     setSubmitting(true);
     const entryDate = date || format(new Date(), 'yyyy-MM-dd');
     try {
-      const collectionName = type === 'task' ? 'tasks' : type === 'expense' ? 'expenses' : type === 'income' ? 'income' : 'goals';
+      const collectionName = type === 'task' ? 'tasks' : type === 'expense' ? 'expenses' : type === 'income' ? 'income' : type === 'goal' ? 'goals' : 'skills';
       const data: any = {
         userId: auth.currentUser.uid,
         date: entryDate
@@ -36,6 +38,12 @@ export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goa
       } else if (type === 'goal') {
         data.goalDescription = description;
         data.target = target;
+      } else if (type === 'skill') {
+        data.name = description;
+        data.category = category || 'General';
+        data.level = skillLevel;
+        data.hoursInvested = parseFloat(hoursInvested) || 0;
+        data.notes = target || '';
       } else {
         data.amount = parseFloat(amount);
         data.category = category;
@@ -50,6 +58,7 @@ export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goa
       setPriority('medium');
       setGoalId('');
       setSkills('');
+      setHoursInvested('');
     } catch (error) {
       console.error('Error adding document: ', error);
     } finally {
@@ -57,12 +66,13 @@ export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goa
     }
   };
 
-  const getTabIcon = (t: 'task' | 'expense' | 'income' | 'goal') => {
+  const getTabIcon = (t: 'task' | 'expense' | 'income' | 'goal' | 'skill') => {
     switch (t) {
       case 'task': return <CheckSquare size={14} />;
       case 'expense': return <DollarSign size={14} className="text-[#FB7185]" />;
       case 'income': return <Wallet size={14} className="text-[#34D399]" />;
       case 'goal': return <Target size={14} className="text-[#22D3EE]" />;
+      case 'skill': return <Award size={14} className="text-[#FBBF24]" />;
     }
   };
 
@@ -78,7 +88,7 @@ export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goa
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-        {(['task', 'expense', 'income', 'goal'] as const).map(t => {
+        {(['task', 'expense', 'income', 'goal', 'skill'] as const).map(t => {
           const isActive = type === t;
           return (
             <button 
@@ -205,6 +215,71 @@ export default function EntryForm({ onAdded, goals }: { onAdded: () => void, goa
               placeholder="e.g. Read 3 books & ship 2 services" 
               className="w-full p-3 bg-[#18223A] border border-[#1E293B] focus:border-[#7C5CFC] focus:outline-none rounded-xl text-sm text-[#F8FAFC] placeholder-[#94A3B8]/60 transition" 
               required 
+            />
+          </div>
+        </div>
+      )}
+
+      {type === 'skill' && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">Skill / Competency Name</label>
+              <input 
+                type="text" 
+                value={description} 
+                onChange={e => setDescription(e.target.value)} 
+                placeholder="e.g. UN Operational Logistics, Public Speaking" 
+                className="w-full p-3 bg-[#18223A] border border-[#1E293B] focus:border-[#7C5CFC] focus:outline-none rounded-xl text-sm text-[#F8FAFC] placeholder-[#94A3B8]/60 transition" 
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">Competency Category</label>
+              <input 
+                type="text" 
+                value={category} 
+                onChange={e => setCategory(e.target.value)} 
+                placeholder="e.g. Peace Operations, Strengths, Social Work" 
+                className="w-full p-3 bg-[#18223A] border border-[#1E293B] focus:border-[#7C5CFC] focus:outline-none rounded-xl text-sm text-[#F8FAFC] placeholder-[#94A3B8]/60 transition" 
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">Proficiency Level</label>
+              <select 
+                value={skillLevel} 
+                onChange={e => setSkillLevel(e.target.value as any)} 
+                className="w-full p-3 bg-[#18223A] border border-[#1E293B] focus:border-[#7C5CFC] focus:outline-none rounded-xl text-sm text-[#F8FAFC] cursor-pointer"
+              >
+                <option value="Novice" className="bg-[#121A2E]">Novice (Foundational)</option>
+                <option value="Intermediate" className="bg-[#121A2E]">Intermediate (Working Proficiency)</option>
+                <option value="Advanced" className="bg-[#121A2E]">Advanced (High Performance)</option>
+                <option value="Mastery" className="bg-[#121A2E]">Mastery (Mentor / Certified Leader)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">Practice / Study Hours</label>
+              <input 
+                type="number" 
+                value={hoursInvested} 
+                onChange={e => setHoursInvested(e.target.value)} 
+                placeholder="e.g. 15" 
+                className="w-full p-3 bg-[#18223A] border border-[#1E293B] focus:border-[#7C5CFC] focus:outline-none rounded-xl text-sm text-[#F8FAFC] placeholder-[#94A3B8]/60 transition" 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#94A3B8] mb-1">Milestone Notes / Application Details</label>
+            <input 
+              type="text" 
+              value={target} 
+              onChange={e => setTarget(e.target.value)} 
+              placeholder="e.g. Completed POTI simulation exam with distinction" 
+              className="w-full p-3 bg-[#18223A] border border-[#1E293B] focus:border-[#7C5CFC] focus:outline-none rounded-xl text-sm text-[#F8FAFC] placeholder-[#94A3B8]/60 transition" 
             />
           </div>
         </div>

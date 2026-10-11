@@ -19,14 +19,33 @@ try {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager()
     })
-  }, firebaseConfig.firestoreDatabaseId);
+  }, (firebaseConfig as any).firestoreDatabaseId);
 } catch (e) {
-  firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  firestoreInstance = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
 }
 
 export const db = firestoreInstance;
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+
+// In-memory token caching as mandated by workspace-integration
+let cachedAccessToken: string | null = null;
+let isSigningIn = false;
+
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    cachedAccessToken = null;
+  }
+});
+
+export const getAccessToken = async (): Promise<string | null> => {
+  return cachedAccessToken;
+};
+
+export const setAccessToken = (token: string | null) => {
+  cachedAccessToken = token;
+};
 
 export async function testConnection() {
   try {
@@ -37,4 +56,33 @@ export async function testConnection() {
 }
 testConnection();
 
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const signInWithGoogle = async () => {
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+    }
+    return result;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const connectGoogleCalendar = async (): Promise<string | null> => {
+  if (cachedAccessToken) return cachedAccessToken;
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+      return cachedAccessToken;
+    }
+    return null;
+  } catch (err) {
+    console.error('Error connecting Google Calendar:', err);
+    throw err;
+  }
+};
+

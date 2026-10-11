@@ -5,7 +5,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { 
   Plus, Pin, Palette, CheckSquare, Tag, 
   DollarSign, Wallet, Target, Sparkles, X, Check,
-  Layers, ArrowRight
+  Layers, ArrowRight, Award
 } from 'lucide-react';
 import { TaskColor, KEEP_COLORS, getKeepColorStyle } from '../types';
 
@@ -14,11 +14,11 @@ interface QuickCaptureBarProps {
   onAdded?: () => void;
 }
 
-const PRESET_TAGS = ['deep-work', 'high-priority', 'runway', 'health', 'learning', 'personal'];
+const PRESET_TAGS = ['deep-work', 'high-priority', 'runway', 'health', 'learning', 'personal', 'peace-ops', 'debate'];
 
 export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [entryType, setEntryType] = useState<'task' | 'reflection' | 'expense' | 'goal'>('task');
+  const [entryType, setEntryType] = useState<'task' | 'reflection' | 'expense' | 'income' | 'goal' | 'skill'>('task');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [goalId, setGoalId] = useState('');
@@ -40,6 +40,11 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [target, setTarget] = useState('');
+
+  // Skill fields
+  const [skillLevel, setSkillLevel] = useState<'Novice' | 'Intermediate' | 'Advanced' | 'Mastery'>('Intermediate');
+  const [skillCategory, setSkillCategory] = useState('High Performance');
+  const [hoursInvested, setHoursInvested] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,6 +102,9 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
     setAmount('');
     setCategory('');
     setTarget('');
+    setSkillLevel('Intermediate');
+    setSkillCategory('High Performance');
+    setHoursInvested('');
     setPriority('medium');
     setGoalId('');
     setPinned(false);
@@ -147,7 +155,14 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
         await addDoc(collection(db, 'expenses'), {
           userId: auth.currentUser.uid,
           amount: parseFloat(amount) || 0,
-          category: category.trim() || 'General',
+          category: category.trim() || 'General Expense',
+          date: today
+        });
+      } else if (entryType === 'income') {
+        await addDoc(collection(db, 'income'), {
+          userId: auth.currentUser.uid,
+          amount: parseFloat(amount) || 0,
+          category: category.trim() || 'General Income',
           date: today
         });
       } else if (entryType === 'goal') {
@@ -155,6 +170,17 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
           userId: auth.currentUser.uid,
           goalDescription: description.trim(),
           target: target.trim() || 'Measurable outcome',
+          date: today
+        });
+      } else if (entryType === 'skill') {
+        await addDoc(collection(db, 'skills'), {
+          userId: auth.currentUser.uid,
+          name: description.trim() || 'New Competency',
+          category: skillCategory.trim() || 'General',
+          level: skillLevel,
+          hoursInvested: parseFloat(hoursInvested) || 0,
+          notes: target.trim() || '',
+          tags: tags.length > 0 ? tags : [skillCategory.toLowerCase()],
           date: today
         });
       }
@@ -209,6 +235,17 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
 
             <button 
               onClick={() => {
+                setEntryType('income');
+                setIsExpanded(true);
+              }}
+              title="Log income"
+              className="p-2 text-[#94A3B8] hover:text-[#34D399] hover:bg-[#1E293B] rounded-xl transition cursor-pointer"
+            >
+              <Wallet size={17} />
+            </button>
+
+            <button 
+              onClick={() => {
                 setEntryType('goal');
                 setIsExpanded(true);
               }}
@@ -216,6 +253,17 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
               className="p-2 text-[#94A3B8] hover:text-[#22D3EE] hover:bg-[#1E293B] rounded-xl transition cursor-pointer"
             >
               <Target size={17} />
+            </button>
+
+            <button 
+              onClick={() => {
+                setEntryType('skill');
+                setIsExpanded(true);
+              }}
+              title="Log skill or competency"
+              className="p-2 text-[#94A3B8] hover:text-[#FBBF24] hover:bg-[#1E293B] rounded-xl transition cursor-pointer"
+            >
+              <Award size={17} />
             </button>
           </div>
         </div>
@@ -225,7 +273,7 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
           {/* Top Domain Switcher & Pin button */}
           <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-[#1E293B]/60">
             <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-              {(['task', 'reflection', 'expense', 'goal'] as const).map(type => {
+              {(['task', 'reflection', 'expense', 'income', 'goal', 'skill'] as const).map(type => {
                 const active = entryType === type;
                 return (
                   <button
@@ -240,8 +288,10 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
                   >
                     {type === 'task' && <CheckSquare size={12} />}
                     {type === 'reflection' && <Sparkles size={12} />}
-                    {type === 'expense' && <DollarSign size={12} />}
-                    {type === 'goal' && <Target size={12} />}
+                    {type === 'expense' && <DollarSign size={12} className="text-[#FB7185]" />}
+                    {type === 'income' && <Wallet size={12} className="text-[#34D399]" />}
+                    {type === 'goal' && <Target size={12} className="text-[#22D3EE]" />}
+                    {type === 'skill' && <Award size={12} className="text-[#FBBF24]" />}
                     <span>{type}</span>
                   </button>
                 );
@@ -277,7 +327,11 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
                   ? "Record a strategic insight or reflection..." 
                   : entryType === 'goal' 
                   ? "Core goal or vision statement..." 
-                  : "Expense note / merchant..."
+                  : entryType === 'expense'
+                  ? "Expense note / merchant..."
+                  : entryType === 'income'
+                  ? "Income source / client / scholarship / contract note..."
+                  : "Skill or competency name (e.g. UN Operational Logistics, Public Debate, TypeScript)..."
               }
               className="w-full bg-transparent text-base sm:text-lg font-medium text-[#F8FAFC] placeholder-[#94A3B8]/60 focus:outline-none"
             />
@@ -316,7 +370,7 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
                   />
                   {newSubtaskText.trim() && (
                     <button 
-                      type="button"
+                      type="button" 
                       onClick={handleAddSubtask}
                       className="px-2 py-0.5 rounded bg-[#7C5CFC] text-white text-[11px] font-semibold cursor-pointer"
                     >
@@ -327,11 +381,11 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
               </div>
             )}
 
-            {/* Financial Specific Inputs */}
+            {/* Expense Specific Inputs */}
             {entryType === 'expense' && (
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="block text-[11px] text-[#94A3B8] mb-1">Amount (RWF)</label>
+                  <label className="block text-[11px] text-[#94A3B8] mb-1">Expense Amount (RWF)</label>
                   <input 
                     type="number"
                     value={amount}
@@ -341,12 +395,84 @@ export default function QuickCaptureBar({ goals, onAdded }: QuickCaptureBarProps
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-[#94A3B8] mb-1">Category</label>
+                  <label className="block text-[11px] text-[#94A3B8] mb-1">Expense Category</label>
                   <input 
                     type="text"
                     value={category}
                     onChange={e => setCategory(e.target.value)}
-                    placeholder="e.g. Groceries, Cloud"
+                    placeholder="e.g. Food, Hosting, Commute"
+                    className="w-full p-2 bg-[#0B1020]/50 border border-[#1E293B] rounded-xl text-xs text-[#F8FAFC] focus:outline-none focus:border-[#7C5CFC]"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Income Specific Inputs */}
+            {entryType === 'income' && (
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block text-[11px] text-[#34D399] font-medium mb-1">Income Amount (RWF)</label>
+                  <input 
+                    type="number"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="e.g. 50000"
+                    className="w-full p-2 bg-[#0B1020]/50 border border-[#34D399]/40 rounded-xl text-xs text-[#F8FAFC] focus:outline-none focus:border-[#34D399]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-[#94A3B8] mb-1">Income Stream / Category</label>
+                  <input 
+                    type="text"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    placeholder="e.g. Freelance, Stipend, Grant, Contract, Salary"
+                    className="w-full p-2 bg-[#0B1020]/50 border border-[#1E293B] rounded-xl text-xs text-[#F8FAFC] focus:outline-none focus:border-[#7C5CFC]"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Skill Specific Inputs */}
+            {entryType === 'skill' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div>
+                  <label className="block text-[11px] text-[#FBBF24] font-medium mb-1">Competency Category</label>
+                  <select
+                    value={skillCategory}
+                    onChange={e => setSkillCategory(e.target.value)}
+                    className="w-full p-2 bg-[#0B1020]/70 border border-[#1E293B] rounded-xl text-xs text-[#F8FAFC] focus:outline-none focus:border-[#7C5CFC] cursor-pointer"
+                  >
+                    <option value="Peace Operations & UN">Peace Operations & UN</option>
+                    <option value="High Performance & Strengths">High Performance & Strengths</option>
+                    <option value="Public Speaking & Debate">Public Speaking & Debate</option>
+                    <option value="Social Work & Community">Social Work & Community</option>
+                    <option value="Language Proficiency">Language Proficiency</option>
+                    <option value="Digital Systems & Tech">Digital Systems & Tech</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-[#94A3B8] mb-1">Proficiency Level</label>
+                  <select
+                    value={skillLevel}
+                    onChange={e => setSkillLevel(e.target.value as any)}
+                    className="w-full p-2 bg-[#0B1020]/70 border border-[#1E293B] rounded-xl text-xs text-[#F8FAFC] focus:outline-none focus:border-[#7C5CFC] cursor-pointer"
+                  >
+                    <option value="Novice">Novice (Foundations)</option>
+                    <option value="Intermediate">Intermediate (Practicing)</option>
+                    <option value="Advanced">Advanced (High Competence)</option>
+                    <option value="Mastery">Mastery (Mentor / Top Tier)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-[#94A3B8] mb-1">Hours Invested / Target</label>
+                  <input
+                    type="number"
+                    value={hoursInvested}
+                    onChange={e => setHoursInvested(e.target.value)}
+                    placeholder="e.g. 10"
                     className="w-full p-2 bg-[#0B1020]/50 border border-[#1E293B] rounded-xl text-xs text-[#F8FAFC] focus:outline-none focus:border-[#7C5CFC]"
                   />
                 </div>
